@@ -16,24 +16,21 @@
  *
  */
 
-package org.apache.skywalking.oap.server.storage.plugin.jdbc.mysql;
+package org.apache.skywalking.oap.server.storage.plugin.cassandra.base;
 
-import org.apache.skywalking.oap.server.library.client.jdbc.hikaricp.JDBCHikariCPClient;
-import org.apache.skywalking.oap.server.storage.plugin.jdbc.h2.dao.H2LogQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.model.Model;
 
-public class MySQLLogQueryDAO extends H2LogQueryDAO {
+import java.util.HashMap;
+import java.util.Map;
 
-    public MySQLLogQueryDAO(JDBCHikariCPClient h2Client) {
-        super(h2Client);
+public class TableMetaInfo {
+    private static Map<String, Model> TABLES = new HashMap<>();
+
+    public static void addModel(Model model) {
+        TABLES.put(model.getName(), model);
     }
 
-    @Override
-    protected String buildCountStatement(String sql) {
-        return "select count(1) total " + sql;
-    }
-
-    @Override
-    protected void buildLimit(StringBuilder sql, int from, int limit) {
-        sql.append(" LIMIT ").append(from).append(", ").append(limit);
+    public static Model get(String moduleName) {
+        return TABLES.get(moduleName);
     }
 }

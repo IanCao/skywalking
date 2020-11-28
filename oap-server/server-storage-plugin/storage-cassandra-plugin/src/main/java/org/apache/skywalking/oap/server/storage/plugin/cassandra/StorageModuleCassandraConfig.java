@@ -16,24 +16,20 @@
  *
  */
 
-package org.apache.skywalking.oap.server.storage.plugin.jdbc.mysql;
+package org.apache.skywalking.oap.server.storage.plugin.cassandra;
 
-import org.apache.skywalking.oap.server.library.client.jdbc.hikaricp.JDBCHikariCPClient;
-import org.apache.skywalking.oap.server.storage.plugin.jdbc.h2.dao.H2LogQueryDAO;
+import lombok.Data;
+import org.apache.skywalking.oap.server.library.module.ModuleConfig;
 
-public class MySQLLogQueryDAO extends H2LogQueryDAO {
+import java.util.List;
 
-    public MySQLLogQueryDAO(JDBCHikariCPClient h2Client) {
-        super(h2Client);
-    }
+@Data
+public class StorageModuleCassandraConfig extends ModuleConfig {
+    private String keyspace;
 
-    @Override
-    protected String buildCountStatement(String sql) {
-        return "select count(1) total " + sql;
-    }
+    private int replicationFactor;
 
-    @Override
-    protected void buildLimit(StringBuilder sql, int from, int limit) {
-        sql.append(" LIMIT ").append(from).append(", ").append(limit);
-    }
+    private List<String> clusters;
+
+    private String dataCenter;
 }

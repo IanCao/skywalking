@@ -35,6 +35,7 @@
         <module>storage-jaeger-plugin</module>
         <module>storage-influxdb-plugin</module>
         <module>storage-tidb-plugin</module>
+        <module>storage-cassandra-plugin</module>
     </modules>
 
 </project>
