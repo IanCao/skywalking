@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package org.apache.skywalking.oap.server.storage.plugin.cassandra.client;
 
 import com.datastax.oss.driver.api.core.CqlSession;
@@ -5,7 +23,6 @@ import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.cql.SimpleStatementBuilder;
 import com.datastax.oss.driver.api.querybuilder.schema.CreateKeyspace;
-import lombok.Getter;
 import org.apache.skywalking.oap.server.library.client.Client;
 import org.apache.skywalking.oap.server.library.util.CollectionUtils;
 import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.KeyspaceReplicationStrategy;
@@ -17,14 +34,13 @@ import java.util.stream.Collectors;
 
 import static com.datastax.oss.driver.api.querybuilder.SchemaBuilder.createKeyspace;
 
-/**
- * @author caoyixiong
- * @Date: 2020/11/28
- * @Copyright (c) 2015, lianjia.com All Rights Reserved
- */
 public class CassandraClient implements Client {
-    @Getter
+
     private CqlSession cqlSession;
+
+    public CqlSession getCqlSession() {
+        return cqlSession;
+    }
 
     public CassandraClient(CqlSession cqlSession) {
         this.cqlSession = cqlSession;
@@ -37,7 +53,6 @@ public class CassandraClient implements Client {
     public void createKeyspaceIfNecessary(String keyspace, int replicationFactor, KeyspaceReplicationStrategy strategy) {
         CreateKeyspace createKeyspace = null;
         if (strategy == KeyspaceReplicationStrategy.NETWORK_TOPOLOGGY) {
-            // TODO 配置信息补充
             createKeyspace = createKeyspace(keyspace).ifNotExists().withNetworkTopologyStrategy(null);
         } else {
             createKeyspace = createKeyspace(keyspace).ifNotExists().withSimpleStrategy(replicationFactor);

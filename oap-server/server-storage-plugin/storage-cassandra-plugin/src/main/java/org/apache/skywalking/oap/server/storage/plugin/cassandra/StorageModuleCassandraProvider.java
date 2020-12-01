@@ -20,24 +20,52 @@ package org.apache.skywalking.oap.server.storage.plugin.cassandra;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.skywalking.oap.server.core.Const;
 import org.apache.skywalking.oap.server.core.CoreModule;
-import org.apache.skywalking.oap.server.core.config.ConfigService;
-import org.apache.skywalking.oap.server.core.storage.*;
+import org.apache.skywalking.oap.server.core.storage.StorageException;
+import org.apache.skywalking.oap.server.core.storage.StorageModule;
+import org.apache.skywalking.oap.server.core.storage.IBatchDAO;
+import org.apache.skywalking.oap.server.core.storage.StorageDAO;
+import org.apache.skywalking.oap.server.core.storage.IHistoryDeleteDAO;
 import org.apache.skywalking.oap.server.core.storage.cache.INetworkAddressAliasDAO;
 import org.apache.skywalking.oap.server.core.storage.management.UITemplateManagementDAO;
 import org.apache.skywalking.oap.server.core.storage.model.ModelCreator;
 import org.apache.skywalking.oap.server.core.storage.profile.IProfileTaskLogQueryDAO;
 import org.apache.skywalking.oap.server.core.storage.profile.IProfileTaskQueryDAO;
 import org.apache.skywalking.oap.server.core.storage.profile.IProfileThreadSnapshotQueryDAO;
-import org.apache.skywalking.oap.server.core.storage.query.*;
-import org.apache.skywalking.oap.server.library.module.*;
-import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.*;
+import org.apache.skywalking.oap.server.core.storage.query.IAggregationQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.ITopologyQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.IMetricsQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.ITraceQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.IBrowserLogQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.IMetadataQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.IAlarmQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.ITopNRecordsQueryDAO;
+import org.apache.skywalking.oap.server.core.storage.query.ILogQueryDAO;
+import org.apache.skywalking.oap.server.library.module.ModuleConfig;
+import org.apache.skywalking.oap.server.library.module.ModuleProvider;
+import org.apache.skywalking.oap.server.library.module.ModuleDefine;
+import org.apache.skywalking.oap.server.library.module.ServiceNotProvidedException;
+import org.apache.skywalking.oap.server.library.module.ModuleStartException;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.BatchProcessDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.StorageProcessDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.HistoryDeleteDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.NetworkAddressAliasDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.MetricsQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.TopologyQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.TraceQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.BrowserLogQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.MetadataQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.AggregationQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.AlarmQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.TopNRecordsQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.LogQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.ProfileTaskQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.ProfileTaskLogQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.ProfileThreadSnapshotQueryDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.KeyspaceReplicationStrategy;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.UITemplateManagementProcessorDAO;
+import org.apache.skywalking.oap.server.storage.plugin.cassandra.base.CassandraTableInstaller;
 import org.apache.skywalking.oap.server.storage.plugin.cassandra.client.CassandraClient;
-import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
-import org.apache.skywalking.oap.server.telemetry.api.HealthCheckMetrics;
-import org.apache.skywalking.oap.server.telemetry.api.MetricsCreator;
-import org.apache.skywalking.oap.server.telemetry.api.MetricsTag;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -87,7 +115,7 @@ public class StorageModuleCassandraProvider extends ModuleProvider {
         this.registerServiceImplementation(IMetricsQueryDAO.class, new MetricsQueryDAO(cassandraClient));
         this.registerServiceImplementation(ITraceQueryDAO.class, new TraceQueryDAO(cassandraClient));
         this.registerServiceImplementation(IBrowserLogQueryDAO.class, new BrowserLogQueryDAO(cassandraClient));
-        this.registerServiceImplementation(IMetadataQueryDAO.class, new MetadataQueryDAO(cassandraClient));
+        this.registerServiceImplementation(IMetadataQueryDAO.class, new MetadataQueryDAO(cassandraClient, 100));
         this.registerServiceImplementation(IAggregationQueryDAO.class, new AggregationQueryDAO(cassandraClient));
         this.registerServiceImplementation(IAlarmQueryDAO.class, new AlarmQueryDAO(cassandraClient));
         this.registerServiceImplementation(ITopNRecordsQueryDAO.class, new TopNRecordsQueryDAO(cassandraClient));
@@ -101,7 +129,6 @@ public class StorageModuleCassandraProvider extends ModuleProvider {
     @Override
     public void start() throws ServiceNotProvidedException, ModuleStartException {
 
-        //TODO 增加healthCheck
         try {
             cassandraClient.connect();
             cassandraClient.createKeyspaceIfNecessary(config.getKeyspace(), config.getReplicationFactor(), KeyspaceReplicationStrategy.SIMPLE);

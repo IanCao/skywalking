@@ -101,7 +101,7 @@ core:
     # Define the set of span tag keys, which should be searchable through the GraphQL.
     searchableTracesTags: ${SW_SEARCHABLE_TAG_KEYS:http.method,status_code,db.type,db.instance,mq.queue,mq.topic,mq.broker}
 storage:
-  selector: ${SW_STORAGE:cassandra}
+  selector: cassandra
   elasticsearch:
     nameSpace: ${SW_NAMESPACE:""}
     clusterNodes: ${SW_STORAGE_ES_CLUSTER_NODES:localhost:9200}
@@ -196,8 +196,7 @@ storage:
   cassandra:
     keyspace: caoyxTest
     replicationFactor: 1
-    clusters:
-    - 127.0.0.1:9042
+    clusters: 127.0.0.1:9042,127.0.0.1:9042
     dataCenter: dataCenter1
 agent-analyzer:
   selector: ${SW_AGENT_ANALYZER:default}
